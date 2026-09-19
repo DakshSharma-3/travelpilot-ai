@@ -39,23 +39,28 @@ const resolveDate = (q: string, trip: Trip, todayIndex: number): { date: string;
   return null;
 };
 
+const STOP = new Set(["fort", "food", "walk", "stop", "court", "the", "and", "show", "view"]);
+const matchScore = (title: string, q: string): number => {
+  const words = norm(title).split(" ").filter((w) => w.length >= 3 && !STOP.has(w));
+  const hits = words.filter((w) => q.includes(w)).length;
+  return hits ? hits + hits / words.length : 0;
+};
+
 const findItem = (q: string, trip: Trip): ItineraryItem | undefined => {
   const active = trip.items.filter((i) => i.status !== "removed" && i.status !== "unavailable");
-  let best: { item: ItineraryItem; hits: number } | undefined;
+  let best: { item: ItineraryItem; s: number } | undefined;
   for (const i of active) {
-    const words = norm(i.title).split(" ").filter((w) => w.length > 3 && !["fort", "food", "walk", "stop", "court"].includes(w));
-    const hits = words.filter((w) => q.includes(w)).length;
-    if (hits && (!best || hits > best.hits)) best = { item: i, hits };
+    const s = matchScore(i.title, q);
+    if (s && (!best || s > best.s)) best = { item: i, s };
   }
   return best?.item;
 };
 
 const findCatalog = (q: string): CatalogActivity | undefined => {
-  let best: { a: CatalogActivity; hits: number } | undefined;
+  let best: { a: CatalogActivity; s: number } | undefined;
   for (const a of JAIPUR_CATALOG) {
-    const words = norm(a.title).split(" ").filter((w) => w.length > 3 && !["fort", "food", "walk", "stop", "court"].includes(w));
-    const hits = words.filter((w) => q.includes(w)).length;
-    if (hits && (!best || hits > best.hits)) best = { a, hits };
+    const s = matchScore(a.title, q);
+    if (s && (!best || s > best.s)) best = { a, s };
   }
   return best?.a;
 };
@@ -72,7 +77,7 @@ export const askAssistant = (raw: string, trip: Trip, todayIndex = 0): Assistant
     const r = removeItem(trip, item.id);
     return { text: `Done — removed ${item.title} from ${fmtDate(item.date)}.`, bullets: r.changeSet.summary, trip: r.trip, changeSet: r.changeSet };
   }
-  if (/^(add|insert|include|put|schedule) /.test(q) || /(add|fit|squeeze) .* (in|into|to) (today|tomorrow|day \d)/.test(q)) {
+  if (!/^(can|could|is there|would|will) /.test(q) && (/^(add|insert|include|put|schedule) /.test(q) || /(add|fit|squeeze) .* (in|into|to) (today|tomorrow|day \d)/.test(q))) {
     const a = findCatalog(q);
     if (!a) return { text: "I couldn't find that in the Jaipur catalog.", bullets: JAIPUR_CATALOG.slice(0, 8).map((x) => x.title) };
     const when = resolveDate(q, trip, todayIndex) ?? { date: dates[todayIndex], label: "today" };

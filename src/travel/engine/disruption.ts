@@ -99,8 +99,8 @@ export const scoreAlternatives = (
     const overflow = Math.max(0, end + BUFFER_MIN + outRoute.minutes - windowEnd);
     breakdown.push({
       label: "Fits freed window",
-      points: overflow === 0 ? 15 : Math.max(0, 15 - Math.round(overflow / 10)),
-      max: 15,
+      points: overflow === 0 ? 25 : Math.max(0, 25 - Math.round(overflow / 2)),
+      max: 25,
     });
     const cost = a.cost + inRoute.cost;
     breakdown.push({
