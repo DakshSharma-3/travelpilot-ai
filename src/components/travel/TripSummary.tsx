@@ -1,7 +1,7 @@
 import { CalendarDays, IndianRupee, MapPin, Route, Timer, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { zoneById } from "@/travel/data/jaipur";
+import { zonesForTrip } from "@/travel/data/catalogRegistry";
 import { tripTotals, activeItems } from "@/travel/engine/metrics";
 import { WEATHER_LABEL, getForecast } from "@/travel/services/weatherService";
 import { ROUTING_LABEL } from "@/travel/services/routingService";
@@ -27,10 +27,19 @@ export function TripSummary({ trip }: { trip: Trip }) {
       <div className="rounded-2xl border bg-card p-5 shadow-card lg:col-span-2">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Trip summary</p>
-            <h2 className="font-display mt-1 text-2xl font-semibold tracking-tight">{trip.constraints.destination}</h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+              Trip summary
+            </p>
+            <h2 className="font-display mt-1 text-2xl font-semibold tracking-tight">
+              {trip.constraints.destination}
+            </h2>
+            {trip.destination?.attribution && (
+              <p className="mt-1 text-xs text-muted-foreground">{trip.destination.attribution}</p>
+            )}
           </div>
-          <Badge variant="saffron" className="capitalize">{trip.constraints.pace} pace</Badge>
+          <Badge variant="saffron" className="capitalize">
+            {trip.constraints.pace} pace
+          </Badge>
         </div>
         <dl className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Stat icon={<CalendarDays className="size-4" />} label="Dates">
@@ -40,10 +49,12 @@ export function TripSummary({ trip }: { trip: Trip }) {
             {fmtTime(trip.constraints.dayStart)} – {fmtTime(trip.constraints.dayEnd)}
           </Stat>
           <Stat icon={<MapPin className="size-4" />} label="Base">
-            {zoneById(trip.constraints.hotelZoneId).name}
+            {zonesForTrip(trip.destination).find((z) => z.id === trip.constraints.hotelZoneId)
+              ?.name ?? trip.constraints.hotelZoneId}
           </Stat>
           <Stat icon={<Route className="size-4" />} label="Transport">
-            <span className="capitalize">{trip.constraints.transport}</span> · {totals.travelMinutes} min total travel
+            <span className="capitalize">{trip.constraints.transport}</span> ·{" "}
+            {totals.travelMinutes} min total travel
           </Stat>
           <Stat icon={<IndianRupee className="size-4" />} label="Activities / transport">
             {inr(totals.activityCost)} + {inr(totals.transportCost)}
@@ -57,7 +68,10 @@ export function TripSummary({ trip }: { trip: Trip }) {
             <div>
               <p className="text-sm font-semibold">Budget</p>
               <p className="text-2xl font-semibold tracking-tight">
-                {inr(totals.total)} <span className="text-sm font-normal text-muted-foreground">of {inr(trip.constraints.budget)}</span>
+                {inr(totals.total)}{" "}
+                <span className="text-sm font-normal text-muted-foreground">
+                  of {inr(trip.constraints.budget)}
+                </span>
               </p>
             </div>
             <Badge variant={over ? "danger" : "success"}>
@@ -97,7 +111,15 @@ export function TripSummary({ trip }: { trip: Trip }) {
   );
 }
 
-function Stat({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
+function Stat({
+  icon,
+  label,
+  children,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <div>
       <dt className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">

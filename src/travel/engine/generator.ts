@@ -1,5 +1,13 @@
-import type { CatalogActivity, ItineraryItem, Pace, Trip, TripConstraints } from "../types";
+import type {
+  CatalogActivity,
+  DestinationContext,
+  ItineraryItem,
+  Pace,
+  Trip,
+  TripConstraints,
+} from "../types";
 import { JAIPUR_CATALOG } from "../data/jaipur";
+import { resolveCatalog } from "../data/catalogRegistry";
 import { estimateRoute } from "../services/routingService";
 import { fromMin, timeOfDay, toMin, tripDates, uid } from "../time";
 
@@ -34,7 +42,12 @@ export const tryPlace = (
 export const interestFit = (a: CatalogActivity, interests: string[]): number =>
   a.tags.filter((t) => interests.includes(t)).length;
 
-const scorePlacement = (p: Placement, c: TripConstraints, remainingBudget: number, wantMeal: boolean): number => {
+const scorePlacement = (
+  p: Placement,
+  c: TripConstraints,
+  remainingBudget: number,
+  wantMeal: boolean,
+): number => {
   const a = p.activity;
   if (!!a.isMeal !== wantMeal) return -Infinity;
   let s = 0;
@@ -53,7 +66,17 @@ const scorePlacement = (p: Placement, c: TripConstraints, remainingBudget: numbe
   return s;
 };
 
-export const generateItinerary = (constraints: TripConstraints): Trip => {
+/**
+ * Build a day-by-day itinerary. `destination` carries the resolved context;
+ * its registered catalog (see data/catalogRegistry) supplies the activities.
+ * Legacy calls without a destination keep the bundled Jaipur demo catalog.
+ * An unregistered destination yields an empty catalog, never Jaipur's data.
+ */
+export const generateItinerary = (
+  constraints: TripConstraints,
+  destination?: DestinationContext,
+): Trip => {
+  const catalog = destination ? (resolveCatalog(destination)?.activities ?? []) : JAIPUR_CATALOG;
   const dates = tripDates(constraints.startDate, constraints.endDate);
   const items: ItineraryItem[] = [];
   const used = new Set<string>();
@@ -85,7 +108,7 @@ export const generateItinerary = (constraints: TripConstraints): Trip => {
       }
       const dayBudgetLeft = Math.max(perDay - dayCost, remaining * 0.6);
       let best: { p: Placement; s: number } | null = null;
-      for (const a of JAIPUR_CATALOG) {
+      for (const a of catalog) {
         if (used.has(a.id)) continue;
         const p = tryPlace(a, cursor, zone, constraints);
         if (!p) continue;
@@ -138,5 +161,6 @@ export const generateItinerary = (constraints: TripConstraints): Trip => {
     items,
     createdAt: new Date().toISOString(),
     changeLog: [],
+    ...(destination ? { destination } : {}),
   };
 };

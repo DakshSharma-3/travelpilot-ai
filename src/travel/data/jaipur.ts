@@ -1,4 +1,5 @@
-import type { CatalogActivity, Zone, TripConstraints } from "../types";
+import { addDays, format } from "date-fns";
+import type { CatalogActivity, Zone, TripConstraints, DestinationContext } from "../types";
 
 export const JAIPUR_ZONES: Zone[] = [
   { id: "pink-city", name: "Pink City (Old Town)", lat: 26.9239, lng: 75.8267 },
@@ -350,15 +351,36 @@ export const JAIPUR_CATALOG: CatalogActivity[] = [
 export const catalogById = (id: string): CatalogActivity | undefined =>
   JAIPUR_CATALOG.find((a) => a.id === id);
 
-export const JAIPUR_DEMO_CONSTRAINTS: TripConstraints = {
-  destination: "Jaipur, Rajasthan",
-  startDate: "2026-10-09",
-  endDate: "2026-10-11",
-  dayStart: "08:30",
-  dayEnd: "20:30",
-  budget: 12000,
-  interests: ["history", "architecture", "food"],
-  transport: "auto",
-  hotelZoneId: "mi-road",
-  pace: "balanced",
+/**
+ * Explicit demo destination for the bundled Jaipur catalog. Only trips created
+ * through the demo path (or a destination that actually resolves to Jaipur)
+ * get these zones/catalog — never other destinations.
+ */
+export const JAIPUR_DESTINATION: DestinationContext = {
+  name: "Jaipur, Rajasthan",
+  lat: 26.9124,
+  lng: 75.7873,
+  countryCode: "in",
+  timezone: "Asia/Kolkata",
+  zones: JAIPUR_ZONES,
+  source: "demo",
+  attribution: "Curated demo catalog",
+};
+
+/** Prefill for the Jaipur demo. Dates are generated fresh so they stay bookable. */
+export const jaipurDemoConstraints = (): TripConstraints => {
+  const startDate = addDays(new Date(), 14);
+  const endDate = addDays(startDate, 2);
+  return {
+    destination: "Jaipur, Rajasthan",
+    startDate: format(startDate, "yyyy-MM-dd"),
+    endDate: format(endDate, "yyyy-MM-dd"),
+    dayStart: "08:30",
+    dayEnd: "20:30",
+    budget: 12000,
+    interests: ["history", "architecture", "food"],
+    transport: "auto",
+    hotelZoneId: "mi-road",
+    pace: "balanced",
+  };
 };

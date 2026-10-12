@@ -1,23 +1,12 @@
 export type Category =
-  | "history"
-  | "architecture"
-  | "food"
-  | "nature"
-  | "culture"
-  | "shopping"
-  | "viewpoint";
+  "history" | "architecture" | "food" | "nature" | "culture" | "shopping" | "viewpoint";
 
 export type TransportMode = "auto" | "cab" | "walk" | "public";
 export type Pace = "relaxed" | "balanced" | "packed";
 export type TimeOfDay = "morning" | "afternoon" | "evening" | "any";
 
 export type ItemStatus =
-  | "planned"
-  | "unavailable"
-  | "replacement"
-  | "rescheduled"
-  | "added"
-  | "removed";
+  "planned" | "unavailable" | "replacement" | "rescheduled" | "added" | "removed";
 
 export interface Zone {
   id: string;
@@ -25,6 +14,60 @@ export interface Zone {
   lat: number;
   lng: number;
 }
+
+/** Where a destination's coordinates/zones came from. "demo" = bundled Jaipur data. */
+export type DestinationSource = "demo" | "geocoded";
+
+/**
+ * Resolved destination: real coordinates plus the zones the planning engine
+ * routes between. Attached to a Trip at generation time so saved trips keep
+ * their destination even if the app's default data changes.
+ */
+export interface DestinationContext {
+  /** Display name, e.g. "Jaipur, Rajasthan" or a full geocoded label. */
+  name: string;
+  lat: number;
+  lng: number;
+  /** ISO 3166-1 alpha-2 lowercase country code, when known. */
+  countryCode?: string;
+  /** IANA timezone, e.g. "Asia/Kolkata", when the provider returns one. */
+  timezone?: string;
+  /** Zones the engine schedules/routes against. Never silently Jaipur's. */
+  zones: Zone[];
+  source: DestinationSource;
+  /** Data-source attribution to display, e.g. "© OpenStreetMap contributors". */
+  attribution?: string;
+}
+
+/** One geocoding match the user can choose from. */
+export interface GeocodeCandidate {
+  id: string;
+  /** Short display name (place name or first part of the label). */
+  name: string;
+  /** Full normalized address from the geocoder. */
+  label: string;
+  lat: number;
+  lng: number;
+  countryCode?: string;
+  timezone?: string;
+  /** Geocoder result type, e.g. "city", "administrative". */
+  resultType?: string;
+  attribution?: string;
+}
+
+export type GeocodeErrorCode =
+  | "missing-key"
+  | "invalid-key"
+  | "rate-limited"
+  | "timeout"
+  | "network"
+  | "bad-response"
+  | "not-found";
+
+/** Result of a destination lookup. Errors carry a user-facing message. */
+export type GeocodeResult =
+  | { ok: true; candidates: GeocodeCandidate[] }
+  | { ok: false; code: GeocodeErrorCode; message: string };
 
 export interface CatalogActivity {
   id: string;
@@ -91,6 +134,8 @@ export interface Trip {
   items: ItineraryItem[];
   createdAt: string;
   changeLog: ChangeSet[];
+  /** Resolved destination context; absent on legacy trips saved before Phase A. */
+  destination?: DestinationContext;
 }
 
 export interface Conflict {

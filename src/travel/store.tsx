@@ -1,6 +1,15 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import type { ChangeSet, Trip, TripConstraints } from "./types";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import type { ChangeSet, DestinationContext, Trip, TripConstraints } from "./types";
 import { generateItinerary } from "./engine/generator";
+import { resolveCatalog } from "./data/catalogRegistry";
 
 const KEY = "travelpilot.trip.v1";
 const DRAFT_KEY = "travelpilot.draft.v1";
@@ -10,7 +19,8 @@ interface Store {
   hydrated: boolean;
   draft: TripConstraints | null;
   setDraft: (d: TripConstraints | null) => void;
-  generate: (c: TripConstraints) => Trip;
+  /** Returns null when a destination has no registered activity catalog. */
+  generate: (c: TripConstraints, destination?: DestinationContext) => Trip | null;
   applyTrip: (t: Trip, change?: ChangeSet) => void;
   reset: () => void;
   lastChange: ChangeSet | null;
@@ -54,8 +64,14 @@ export function TripProvider({ children }: { children: ReactNode }) {
     else localStorage.removeItem(DRAFT_KEY);
   }, []);
 
-  const generate = useCallback((c: TripConstraints) => {
-    const t = generateItinerary(c);
+  const generate = useCallback((c: TripConstraints, destination?: DestinationContext) => {
+    // Refuse unregistered destinations outright — never fall back to Jaipur.
+    const catalog = destination ? resolveCatalog(destination) : undefined;
+    if (destination && !catalog) return null;
+    const t = generateItinerary(
+      c,
+      destination ? { ...destination, zones: catalog!.zones } : undefined,
+    );
     setTrip(t);
     setLastChange(null);
     setHighlight(new Set());
@@ -82,8 +98,30 @@ export function TripProvider({ children }: { children: ReactNode }) {
   const clearHighlights = useCallback(() => setHighlight(new Set()), []);
 
   const value = useMemo(
-    () => ({ trip, hydrated, draft, setDraft, generate, applyTrip, reset, lastChange, highlightIds, clearHighlights }),
-    [trip, hydrated, draft, setDraft, generate, applyTrip, reset, lastChange, highlightIds, clearHighlights],
+    () => ({
+      trip,
+      hydrated,
+      draft,
+      setDraft,
+      generate,
+      applyTrip,
+      reset,
+      lastChange,
+      highlightIds,
+      clearHighlights,
+    }),
+    [
+      trip,
+      hydrated,
+      draft,
+      setDraft,
+      generate,
+      applyTrip,
+      reset,
+      lastChange,
+      highlightIds,
+      clearHighlights,
+    ],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
